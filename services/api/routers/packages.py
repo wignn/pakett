@@ -114,12 +114,12 @@ async def get_packages_ready_for_delivery(
             a.house_number,
             a.subdistrict,
             a.city,
+            a.raw_text,
             ST_Y(a.location::geometry) as lat,
             ST_X(a.location::geometry) as lon
         FROM packages p
-        JOIN addresses a ON a.package_id = p.id
-        WHERE p.status IN ('geocoded', 'parsed')
-        AND a.location IS NOT NULL
+        LEFT JOIN addresses a ON a.package_id = p.id
+        WHERE p.status IN ('geocoded', 'parsed', 'pending', 'verification_needed')
         ORDER BY 
             CASE p.priority 
                 WHEN 'express' THEN 1 
@@ -145,7 +145,16 @@ async def get_packages_ready_for_delivery(
         if row_dict.get("city"):
             address_parts.append(row_dict["city"])
         
-        row_dict["address_summary"] = ", ".join(address_parts) if address_parts else "Unknown"
+        # Use raw_text as fallback if no parsed address
+        if address_parts:
+            row_dict["address_summary"] = ", ".join(address_parts)
+        elif row_dict.get("raw_text"):
+            # Take first line of raw text as summary
+            raw_lines = row_dict["raw_text"].split('\n')
+            row_dict["address_summary"] = raw_lines[0][:50] if raw_lines else "No address"
+        else:
+            row_dict["address_summary"] = "No address"
+        
         packages.append(row_dict)
     
     return {
