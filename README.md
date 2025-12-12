@@ -11,7 +11,7 @@ A comprehensive system for package delivery routing with OCR-based address extra
 - **Real-time Processing**: Kafka-based message streaming for async processing
 - **RESTful API**: FastAPI-based endpoints for all operations
 
-## 📋 Requirements
+## 📋Requirements
 
 - Docker & Docker Compose
 - Python 3.11+ (for local development)

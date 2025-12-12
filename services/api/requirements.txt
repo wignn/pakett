@@ -1,50 +1,29 @@
-# Core FastAPI
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
 python-multipart==0.0.6
 python-dotenv==1.0.0
-
-# Database
 asyncpg==0.29.0
 sqlalchemy[asyncio]==2.0.25
 psycopg2-binary==2.9.9
-
-# Redis
 redis==5.0.1
 aioredis==2.0.1
-
-# Kafka
 aiokafka==0.10.0
 confluent-kafka==2.3.0
-
-# OCR
 pytesseract==0.3.10
 Pillow==10.2.0
 opencv-python-headless==4.9.0.80
-
-# Address parsing & geocoding
 geopy==2.4.1
 httpx==0.26.0
-
-# VRP Optimization
 ortools==9.8.3296
-
-# Data validation & serialization
 pydantic==2.5.3
 pydantic-settings==2.1.0
-
-# Utilities
 python-json-logger==2.0.7
 structlog==24.1.0
 tenacity==8.2.3
 cachetools==5.3.2
-
-# Testing
 pytest==7.4.4
 pytest-asyncio==0.23.3
 httpx==0.26.0
-
-# Development
 black==24.1.1
 isort==5.13.2
 mypy==1.8.0
