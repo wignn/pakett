@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-paket}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-paket_secret}
-      POSTGRES_DB: ${POSTGRES_DB:-paket_db}
+      POSTGRES_DB: ${POSTGRES_DB:-paket}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
@@ -83,7 +83,7 @@ services:
       dockerfile: Dockerfile
     container_name: paket-api
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-paket}:${POSTGRES_PASSWORD:-paket_secret}@postgres:5432/${POSTGRES_DB:-paket_db}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-paket}:${POSTGRES_PASSWORD:-paket_secret}@postgres:5432/${POSTGRES_DB:-paket}
       - REDIS_URL=redis://redis:6379/0
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - GEOCODING_API_KEY=${GEOCODING_API_KEY:-}
@@ -112,7 +112,7 @@ services:
       dockerfile: Dockerfile
     container_name: paket-worker
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-paket}:${POSTGRES_PASSWORD:-paket_secret}@postgres:5432/${POSTGRES_DB:-paket_db}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-paket}:${POSTGRES_PASSWORD:-paket_secret}@postgres:5432/${POSTGRES_DB:-paket}
       - REDIS_URL=redis://redis:6379/0
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - GEOCODING_API_KEY=${GEOCODING_API_KEY:-}
