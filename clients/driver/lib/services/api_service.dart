@@ -1,21 +1,141 @@
 import 'package:dio/dio.dart';
 import '../models/route_model.dart';
+import 'storage_service.dart';
+
+class PackageModel {
+  final String id;
+  final String packageId;
+  final String status;
+  final String? priority;
+  final double? lat;
+  final double? lon;
+  final String? addressSummary;
+  final DateTime? createdAt;
+
+  PackageModel({
+    required this.id,
+    required this.packageId,
+    required this.status,
+    this.priority,
+    this.lat,
+    this.lon,
+    this.addressSummary,
+    this.createdAt,
+  });
+
+  factory PackageModel.fromJson(Map<String, dynamic> json) {
+    return PackageModel(
+      id: json['id'] ?? '',
+      packageId: json['package_id'] ?? '',
+      status: json['status'] ?? 'pending',
+      priority: json['priority'],
+      lat: json['lat']?.toDouble(),
+      lon: json['lon']?.toDouble(),
+      addressSummary: json['address_summary'],
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'])
+          : null,
+    );
+  }
+}
 
 class ApiService {
   late Dio _dio;
-  final String _baseUrl = 'http://localhost:8000';
+  final StorageService _storage = StorageService();
   
   ApiService() {
     _dio = Dio(BaseOptions(
-      baseUrl: _baseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
+      headers: {'Content-Type': 'application/json'},
     ));
   }
   
+  Future<String> get _baseUrl async {
+    return await _storage.getServerUrl();
+  }
+  
+  // ============ Packages API ============
+  
+  Future<List<PackageModel>> getPackages({String? status}) async {
+    try {
+      final baseUrl = await _baseUrl;
+      final queryParams = <String, dynamic>{};
+      if (status != null) {
+        queryParams['status'] = status;
+      }
+      
+      final response = await _dio.get(
+        '$baseUrl/api/v1/packages/',
+        queryParameters: queryParams,
+      );
+      
+      if (response.statusCode == 200) {
+        final packages = (response.data['packages'] as List?)
+            ?.map((e) => PackageModel.fromJson(e))
+            .toList() ?? [];
+        return packages;
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching packages: $e');
+      return [];
+    }
+  }
+  
+  Future<List<PackageModel>> getPackagesReadyForDelivery() async {
+    try {
+      final baseUrl = await _baseUrl;
+      final response = await _dio.get('$baseUrl/api/v1/packages/ready-for-delivery');
+      
+      if (response.statusCode == 200) {
+        final packages = (response.data['packages'] as List?)
+            ?.map((e) => PackageModel.fromJson(e))
+            .toList() ?? [];
+        return packages;
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching packages ready for delivery: $e');
+      return [];
+    }
+  }
+  
+  Future<Map<String, dynamic>?> getPackageStats() async {
+    try {
+      final baseUrl = await _baseUrl;
+      final response = await _dio.get('$baseUrl/api/v1/packages/stats');
+      
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching package stats: $e');
+      return null;
+    }
+  }
+  
+  Future<bool> updatePackageStatus(String packageId, String status) async {
+    try {
+      final baseUrl = await _baseUrl;
+      final response = await _dio.patch(
+        '$baseUrl/api/v1/packages/$packageId/status',
+        queryParameters: {'status': status},
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error updating package status: $e');
+      return false;
+    }
+  }
+  
+  // ============ Routes API ============
+  
   Future<List<RouteModel>> getRoutes() async {
     try {
-      final response = await _dio.get('/api/v1/routes');
+      final baseUrl = await _baseUrl;
+      final response = await _dio.get('$baseUrl/api/v1/routes/');
       
       if (response.statusCode == 200) {
         final routes = (response.data['routes'] as List?)
@@ -25,88 +145,49 @@ class ApiService {
       }
       return [];
     } catch (e) {
-      // Return mock data for demo
-      return _getMockRoutes();
+      print('Error fetching routes: $e');
+      return [];
     }
   }
   
   Future<RouteModel?> getRoute(String routeId) async {
     try {
-      final response = await _dio.get('/api/v1/routes/$routeId');
+      final baseUrl = await _baseUrl;
+      final response = await _dio.get('$baseUrl/api/v1/routes/$routeId');
       
       if (response.statusCode == 200) {
         return RouteModel.fromJson(response.data);
       }
       return null;
     } catch (e) {
+      print('Error fetching route: $e');
       return null;
     }
   }
   
   Future<bool> updateStopStatus(String routeId, String stopId, String status) async {
     try {
+      final baseUrl = await _baseUrl;
       final response = await _dio.patch(
-        '/api/v1/routes/$routeId/stops/$stopId',
+        '$baseUrl/api/v1/routes/$routeId/stops/$stopId',
         data: {'status': status},
       );
       return response.statusCode == 200;
     } catch (e) {
+      print('Error updating stop status: $e');
       return false;
     }
   }
   
-  List<RouteModel> _getMockRoutes() {
-    return [
-      RouteModel(
-        id: 'route-1',
-        vehicleId: 'V001',
-        driverName: 'Driver A',
-        plannedDate: DateTime.now(),
-        status: 'planned',
-        totalDistanceKm: 25.4,
-        totalTimeMinutes: 180,
-        stops: [
-          RouteStop(
-            sequence: 0,
-            lat: -6.2088,
-            lon: 106.8456,
-            addressSummary: 'Depot',
-            status: 'completed',
-          ),
-          RouteStop(
-            sequence: 1,
-            packageId: 'PKT001',
-            lat: -6.225,
-            lon: 106.795,
-            addressSummary: 'Jalan Sudirman 45, Menteng',
-            status: 'pending',
-          ),
-          RouteStop(
-            sequence: 2,
-            packageId: 'PKT002',
-            lat: -6.235,
-            lon: 106.780,
-            addressSummary: 'Jalan Thamrin 12, Tanah Abang',
-            status: 'pending',
-          ),
-          RouteStop(
-            sequence: 3,
-            packageId: 'PKT003',
-            lat: -6.215,
-            lon: 106.820,
-            addressSummary: 'Jalan Gatot Subroto 78, Setiabudi',
-            status: 'pending',
-          ),
-          RouteStop(
-            sequence: 4,
-            packageId: 'PKT004',
-            lat: -6.245,
-            lon: 106.810,
-            addressSummary: 'Jalan Rasuna Said 33, Kuningan',
-            status: 'pending',
-          ),
-        ],
-      ),
-    ];
+  // ============ Health Check ============
+  
+  Future<bool> checkHealth() async {
+    try {
+      final baseUrl = await _baseUrl;
+      final response = await _dio.get('$baseUrl/health');
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
   }
 }

@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from config import settings
 from db.database import init_db, close_db
-from routers import ingest, address, routing, health
+from routers import ingest, address, routing, health, packages
 
 # Configure logging
 logging.basicConfig(
@@ -74,6 +74,7 @@ app.include_router(health.router, tags=["Health"])
 app.include_router(ingest.router, prefix="/api/v1/ingest", tags=["Ingest"])
 app.include_router(address.router, prefix="/api/v1/address", tags=["Address"])
 app.include_router(routing.router, prefix="/api/v1/routes", tags=["Routing"])
+app.include_router(packages.router, prefix="/api/v1/packages", tags=["Packages"])
 
 
 # Global exception handler

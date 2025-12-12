@@ -7,15 +7,21 @@ class RouteProvider extends ChangeNotifier {
   
   RouteModel? _currentRoute;
   List<RouteModel> _availableRoutes = [];
+  List<PackageModel> _packages = [];
+  Map<String, dynamic>? _stats;
   bool _isLoading = false;
   String? _error;
   int _currentStopIndex = 0;
   
   RouteModel? get currentRoute => _currentRoute;
   List<RouteModel> get availableRoutes => _availableRoutes;
+  List<PackageModel> get packages => _packages;
+  Map<String, dynamic>? get stats => _stats;
   bool get isLoading => _isLoading;
   String? get error => _error;
   int get currentStopIndex => _currentStopIndex;
+  
+  int get pendingPackagesCount => _packages.length;
   
   RouteStop? get currentStop {
     if (_currentRoute == null || 
@@ -66,6 +72,49 @@ class RouteProvider extends ChangeNotifier {
     }
   }
   
+  Future<void> loadPackages() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    
+    try {
+      _packages = await _api.getPackagesReadyForDelivery();
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+  
+  Future<void> loadStats() async {
+    try {
+      _stats = await _api.getPackageStats();
+      notifyListeners();
+    } catch (e) {
+      // Silently fail for stats
+    }
+  }
+  
+  Future<void> refreshAll() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    
+    try {
+      await Future.wait([
+        loadRoutes(),
+        loadPackages(),
+        loadStats(),
+      ]);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+  
   Future<void> selectRoute(RouteModel route) async {
     _currentRoute = route;
     _currentStopIndex = 0;
@@ -94,6 +143,11 @@ class RouteProvider extends ChangeNotifier {
         actualArrival: DateTime.now(),
       );
       
+      // Update package status in backend
+      if (currentStop!.packageId != null) {
+        await _api.updatePackageStatus(currentStop!.packageId!, 'delivered');
+      }
+      
       // Move to next stop
       if (_currentStopIndex < _currentRoute!.stops.length - 1) {
         _currentStopIndex++;
@@ -113,6 +167,11 @@ class RouteProvider extends ChangeNotifier {
       status: 'skipped',
       notes: reason,
     );
+    
+    // Update package status in backend
+    if (currentStop!.packageId != null) {
+      await _api.updatePackageStatus(currentStop!.packageId!, 'failed');
+    }
     
     if (_currentStopIndex < _currentRoute!.stops.length - 1) {
       _currentStopIndex++;

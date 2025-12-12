@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/route_provider.dart';
+import '../services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -10,13 +11,22 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     Future.microtask(() {
-      context.read<RouteProvider>().loadRoutes();
+      context.read<RouteProvider>().refreshAll();
     });
+  }
+  
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
@@ -54,6 +64,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.settings),
+                    onPressed: () => Navigator.pushNamed(context, '/settings'),
+                  ),
                 ],
               ),
               
@@ -71,66 +86,25 @@ class _HomeScreenState extends State<HomeScreen> {
               
               const SizedBox(height: 24),
               
-              // Available Routes
-              Text(
-                'Available Routes',
-                style: Theme.of(context).textTheme.titleLarge,
+              // Tab Bar
+              TabBar(
+                controller: _tabController,
+                tabs: const [
+                  Tab(text: 'Routes', icon: Icon(Icons.route)),
+                  Tab(text: 'Packages', icon: Icon(Icons.inventory_2)),
+                ],
               ),
               const SizedBox(height: 16),
               
               Expanded(
-                child: Consumer<RouteProvider>(
-                  builder: (context, provider, child) {
-                    if (provider.isLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    
-                    if (provider.availableRoutes.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.route,
-                              size: 64,
-                              color: AppTheme.textMuted.withOpacity(0.5),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'No routes available',
-                              style: TextStyle(color: AppTheme.textMuted),
-                            ),
-                            const SizedBox(height: 24),
-                            OutlinedButton.icon(
-                              onPressed: () => provider.loadRoutes(),
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Refresh'),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                    
-                    return RefreshIndicator(
-                      onRefresh: () => provider.loadRoutes(),
-                      child: ListView.builder(
-                        itemCount: provider.availableRoutes.length,
-                        itemBuilder: (context, index) {
-                          final route = provider.availableRoutes[index];
-                          return _RouteCard(
-                            vehicleId: route.vehicleId,
-                            stops: route.stops.length,
-                            distance: route.totalDistanceKm,
-                            duration: route.totalTimeMinutes,
-                            onTap: () {
-                              provider.selectRoute(route);
-                              Navigator.pushNamed(context, '/route');
-                            },
-                          );
-                        },
-                      ),
-                    );
-                  },
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // Routes Tab
+                    _RoutesTab(),
+                    // Packages Tab
+                    _PackagesTab(),
+                  ],
                 ),
               ),
             ],
@@ -319,3 +293,208 @@ class _RouteCard extends StatelessWidget {
     );
   }
 }
+
+class _RoutesTab extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<RouteProvider>(
+      builder: (context, provider, child) {
+        if (provider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        if (provider.availableRoutes.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.route,
+                  size: 64,
+                  color: AppTheme.textMuted.withOpacity(0.5),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'No routes available',
+                  style: TextStyle(color: AppTheme.textMuted),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Routes will appear here after optimization',
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                ),
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  onPressed: () => provider.loadRoutes(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Refresh'),
+                ),
+              ],
+            ),
+          );
+        }
+        
+        return RefreshIndicator(
+          onRefresh: () => provider.loadRoutes(),
+          child: ListView.builder(
+            itemCount: provider.availableRoutes.length,
+            itemBuilder: (context, index) {
+              final route = provider.availableRoutes[index];
+              return _RouteCard(
+                vehicleId: route.vehicleId,
+                stops: route.stops.length,
+                distance: route.totalDistanceKm,
+                duration: route.totalTimeMinutes,
+                onTap: () {
+                  provider.selectRoute(route);
+                  Navigator.pushNamed(context, '/route');
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PackagesTab extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<RouteProvider>(
+      builder: (context, provider, child) {
+        if (provider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        if (provider.packages.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.inventory_2,
+                  size: 64,
+                  color: AppTheme.textMuted.withOpacity(0.5),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'No packages ready for delivery',
+                  style: TextStyle(color: AppTheme.textMuted),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Scan packages using the Scanner app',
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                ),
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  onPressed: () => provider.loadPackages(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Refresh'),
+                ),
+              ],
+            ),
+          );
+        }
+        
+        return RefreshIndicator(
+          onRefresh: () => provider.loadPackages(),
+          child: ListView.builder(
+            itemCount: provider.packages.length,
+            itemBuilder: (context, index) {
+              final pkg = provider.packages[index];
+              return _PackageCard(package: pkg);
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PackageCard extends StatelessWidget {
+  final PackageModel package;
+  
+  const _PackageCard({required this.package});
+  
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: _getStatusColor().withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.inventory_2,
+                color: _getStatusColor(),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    package.packageId,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    package.addressSummary ?? 'No address',
+                    style: const TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 13,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: _getStatusColor().withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                package.status,
+                style: TextStyle(
+                  color: _getStatusColor(),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Color _getStatusColor() {
+    switch (package.status) {
+      case 'geocoded':
+        return AppTheme.accentGreen;
+      case 'parsed':
+        return AppTheme.accentBlue;
+      case 'pending':
+        return AppTheme.accentOrange;
+      default:
+        return AppTheme.textMuted;
+    }
+  }
+}
+

@@ -16,7 +16,7 @@ class StorageService {
   // Server URL
   Future<String> getServerUrl() async {
     final prefs = await _prefs;
-    return prefs.getString(_keyServerUrl) ?? 'http://localhost:8000';
+    return prefs.getString(_keyServerUrl) ?? 'http://208.76.40.118:8001';
   }
   
   Future<void> setServerUrl(String url) async {

@@ -4,7 +4,7 @@ import '../services/storage_service.dart';
 class SettingsProvider extends ChangeNotifier {
   final StorageService _storage = StorageService();
   
-  String _serverUrl = 'http://localhost:8000';
+  String _serverUrl = 'http://208.76.40.118:8001';
   String _deviceId = '';
   bool _autoSync = true;
   double _confidenceThreshold = 0.7;

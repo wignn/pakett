@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/route_screen.dart';
 import 'screens/delivery_screen.dart';
+import 'screens/settings_screen.dart';
 import 'providers/route_provider.dart';
 import 'theme/app_theme.dart';
 
@@ -35,6 +36,7 @@ class PaketDriverApp extends StatelessWidget {
         routes: {
           '/': (context) => const HomeScreen(),
           '/route': (context) => const RouteScreen(),
+          '/settings': (context) => const SettingsScreen(),
         },
         onGenerateRoute: (settings) {
           if (settings.name == '/delivery') {
