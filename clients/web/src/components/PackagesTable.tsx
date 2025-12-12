@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Package } from '@/lib/types';
-import { Eye, MapPin, Check, AlertTriangle } from 'lucide-react';
+import { Package as PackageType } from '@/lib/types';
+import { Eye, MapPin, Check, AlertTriangle, Package as PackageIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface PackagesTableProps {
-    packages: Package[];
+    packages: PackageType[];
     compact?: boolean;
-    onSelect?: (pkg: Package) => void;
+    onSelect?: (pkg: PackageType) => void;
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -30,7 +30,7 @@ export default function PackagesTable({ packages, compact, onSelect }: PackagesT
                 textAlign: 'center',
                 color: 'var(--text-muted)'
             }}>
-                <Package size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                <PackageIcon size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
                 <p>No packages found</p>
             </div>
         );
