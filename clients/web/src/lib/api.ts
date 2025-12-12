@@ -24,7 +24,7 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
 // Packages
 export async function fetchPackages(limit = 50): Promise<Package[]> {
     try {
-        const data = await fetchAPI<{ packages: Package[] }>(`/ingest?limit=${limit}`);
+        const data = await fetchAPI<{ packages: Package[] }>(`/packages/?limit=${limit}`);
         return data.packages || [];
     } catch {
         // Return mock data for demo
@@ -33,7 +33,7 @@ export async function fetchPackages(limit = 50): Promise<Package[]> {
 }
 
 export async function fetchPackage(packageId: string): Promise<Package> {
-    return fetchAPI<Package>(`/ingest/${packageId}`);
+    return fetchAPI<Package>(`/packages/${packageId}`);
 }
 
 export async function ingestPackage(data: {
