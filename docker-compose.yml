@@ -130,6 +130,21 @@ services:
       - paket-network
     command: python -m workers.main
 
+  # Web Dashboard (Next.js)
+  web:
+    build:
+      context: ./clients/web
+      dockerfile: Dockerfile
+    container_name: paket-web
+    environment:
+      - API_URL=http://api:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - paket-network
+
 volumes:
   postgres_data:
   redis_data:
