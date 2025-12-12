@@ -1,0 +1,145 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with PostGIS extension
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: paket-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-paket}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-paket_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-paket_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-paket}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - paket-network
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: paket-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - paket-network
+
+  # Zookeeper for Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: paket-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    networks:
+      - paket-network
+
+  # Kafka message broker
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: paket-kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    ports:
+      - "29092:29092"
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - paket-network
+
+  # Main API Service
+  api:
+    build:
+      context: ./services/api
+      dockerfile: Dockerfile
+    container_name: paket-api
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-paket}:${POSTGRES_PASSWORD:-paket_secret}@postgres:5432/${POSTGRES_DB:-paket_db}
+      - REDIS_URL=redis://redis:6379/0
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - GEOCODING_API_KEY=${GEOCODING_API_KEY:-}
+      - GEOCODING_PROVIDER=${GEOCODING_PROVIDER:-nominatim}
+      - DEBUG=${DEBUG:-true}
+    volumes:
+      - ./services/api:/app
+      - uploaded_images:/app/uploads
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - paket-network
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Kafka worker for background processing
+  worker:
+    build:
+      context: ./services/api
+      dockerfile: Dockerfile
+    container_name: paket-worker
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-paket}:${POSTGRES_PASSWORD:-paket_secret}@postgres:5432/${POSTGRES_DB:-paket_db}
+      - REDIS_URL=redis://redis:6379/0
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - GEOCODING_API_KEY=${GEOCODING_API_KEY:-}
+      - GEOCODING_PROVIDER=${GEOCODING_PROVIDER:-nominatim}
+    volumes:
+      - ./services/api:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - paket-network
+    command: python -m workers.main
+
+volumes:
+  postgres_data:
+  redis_data:
+  zookeeper_data:
+  zookeeper_log:
+  kafka_data:
+  uploaded_images:
+
+networks:
+  paket-network:
+    driver: bridge
