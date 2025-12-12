@@ -2,12 +2,15 @@
 Indonesian Address Parser Service.
 Uses regex-based parsing with OCR error correction.
 Designed for Indonesian address format with RT/RW support.
+Enhanced with local dataset matching for better accuracy.
 """
 
 import re
 from typing import Optional, List, Tuple
 from dataclasses import dataclass
 import logging
+
+from services.address_matcher import get_address_matcher
 
 logger = logging.getLogger(__name__)
 
@@ -249,7 +252,40 @@ class AddressParser:
             result.neighborhood = neighborhood_match.group(1).strip().title()
             confidence_score += 0.5
         
-        # Calculate confidence
+        # ========================================
+        # ENHANCED: Dataset-based matching
+        # ========================================
+        # If city or subdistrict not found by regex, try dataset matching
+        if not result.city or not result.subdistrict:
+            try:
+                matcher = get_address_matcher()
+                match_result = matcher.match_text(text)
+                
+                # Fill in missing fields from match result
+                if not result.subdistrict and match_result.kecamatan:
+                    result.subdistrict = match_result.kecamatan.title()
+                    confidence_score += match_result.confidence * 1.0
+                    logger.debug(f"Dataset matched kecamatan: {match_result.kecamatan}")
+                
+                if not result.city and match_result.kabupaten:
+                    result.city = match_result.kabupaten.title()
+                    confidence_score += match_result.confidence * 1.0
+                    logger.debug(f"Dataset matched kabupaten: {match_result.kabupaten}")
+                
+                if not result.province and match_result.provinsi:
+                    result.province = match_result.provinsi.title()
+                    confidence_score += match_result.confidence * 0.5
+                    logger.debug(f"Dataset matched provinsi: {match_result.provinsi}")
+                
+                if not result.neighborhood and match_result.kelurahan:
+                    result.neighborhood = match_result.kelurahan.title()
+                    confidence_score += match_result.confidence * 0.5
+                    
+            except Exception as e:
+                logger.warning(f"Dataset matching failed: {e}")
+        
+        # Calculate confidence (adjusted max for new fields)
+        max_possible = 8.0  # street, number, rt, rw, subdistrict, city, province, postal
         result.confidence = min(confidence_score / max_possible, 1.0)
         
         logger.debug(f"Parsed address: {result}")

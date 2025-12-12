@@ -27,3 +27,4 @@ httpx==0.26.0
 black==24.1.1
 isort==5.13.2
 mypy==1.8.0
+rapidfuzz==3.6.1

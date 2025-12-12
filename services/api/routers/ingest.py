@@ -100,6 +100,12 @@ async def ingest_ocr_text(
                         
             except Exception as e:
                 logger.warning(f"Geocoding failed for package {request.package_id}: {e}")
+            
+            # Fallback: if geocoding failed but we have matched location from dataset,
+            # use parse confidence as geocode_confidence
+            if not geocoded and (parse_result.city or parse_result.subdistrict):
+                geocode_confidence = parse_result.confidence * 0.8  # Slightly lower since no coords
+                logger.info(f"Using dataset match confidence for {request.package_id}: {geocode_confidence:.2f}")
         
         # Determine if verification is needed
         if parse_result.confidence < 0.5 or request.ocr_confidence < settings.ocr_confidence_threshold:
@@ -262,6 +268,12 @@ async def ingest_image(
                         
             except Exception as e:
                 logger.warning(f"Geocoding failed for package {package_id}: {e}")
+            
+            # Fallback: if geocoding failed but we have matched location from dataset,
+            # use parse confidence as geocode_confidence
+            if not geocoded and (parse_result.city or parse_result.subdistrict):
+                geocode_confidence = parse_result.confidence * 0.8
+                logger.info(f"Using dataset match confidence for {package_id}: {geocode_confidence:.2f}")
         
         if parse_result.confidence < 0.5:
             requires_verification = True

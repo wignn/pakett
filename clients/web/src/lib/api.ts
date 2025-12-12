@@ -23,13 +23,8 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
 // Packages
 export async function fetchPackages(limit = 50): Promise<Package[]> {
-    try {
-        const data = await fetchAPI<{ packages: Package[] }>(`/packages/?limit=${limit}`);
-        return data.packages || [];
-    } catch {
-        // Return mock data for demo
-        return generateMockPackages(limit);
-    }
+    const data = await fetchAPI<{ packages: Package[] }>(`/packages/?limit=${limit}`);
+    return data.packages || [];
 }
 
 export async function fetchPackage(packageId: string): Promise<Package> {
@@ -73,13 +68,9 @@ export async function geocodeAddress(address: Partial<ParsedAddress>): Promise<{
 
 // Routes
 export async function fetchRoutes(date?: string): Promise<Route[]> {
-    try {
-        const params = date ? `?planned_date=${date}` : '';
-        const data = await fetchAPI<{ routes: Route[] }>(`/routes${params}`);
-        return data.routes || [];
-    } catch {
-        return generateMockRoutes();
-    }
+    const params = date ? `?planned_date=${date}` : '';
+    const data = await fetchAPI<{ routes: Route[] }>(`/routes/${params}`);
+    return data.routes || [];
 }
 
 export async function fetchRoute(routeId: string): Promise<Route> {
@@ -95,97 +86,22 @@ export async function optimizeRoutes(request: OptimizeRequest): Promise<Optimize
 
 // Stats
 export async function fetchStats(): Promise<Stats> {
-    try {
-        // Try to get real stats from health endpoint
-        await fetchAPI('/health/ready');
+    // Get stats from packages endpoint
+    const statsData = await fetchAPI<{ stats: Record<string, number>; total: number }>('/packages/stats');
+    const packages = await fetchPackages(200);
 
-        // Aggregate stats from packages
-        const packages = await fetchPackages(200);
-
-        return {
-            total_packages: packages.length,
-            pending_packages: packages.filter(p => p.status === 'pending').length,
-            geocoded_packages: packages.filter(p => p.status === 'geocoded').length,
-            routed_packages: packages.filter(p => p.status === 'routed').length,
-            verification_needed: packages.filter(p => p.status === 'verification_needed').length,
-            total_routes_today: 0,
-            active_vehicles: 3,
-            avg_confidence: packages.reduce((sum, p) => sum + p.ocr_confidence, 0) / packages.length || 0,
-        };
-    } catch {
-        // Return mock stats for demo
-        return {
-            total_packages: 156,
-            pending_packages: 12,
-            geocoded_packages: 89,
-            routed_packages: 45,
-            verification_needed: 10,
-            total_routes_today: 8,
-            active_vehicles: 5,
-            avg_confidence: 0.87,
-        };
-    }
+    return {
+        total_packages: statsData.total || 0,
+        pending_packages: statsData.stats?.pending || 0,
+        geocoded_packages: statsData.stats?.geocoded || 0,
+        routed_packages: statsData.stats?.routed || 0,
+        verification_needed: statsData.stats?.verification_needed || 0,
+        total_routes_today: 0,
+        active_vehicles: 3,
+        avg_confidence: packages.length > 0
+            ? packages.reduce((sum, p) => sum + (p.ocr_confidence || 0), 0) / packages.length
+            : 0,
+    };
 }
 
-// Mock data generators for demo
-function generateMockPackages(count: number): Package[] {
-    const statuses = ['pending', 'geocoded', 'routed', 'verification_needed'] as const;
-    const cities = ['Jakarta Selatan', 'Jakarta Pusat', 'Jakarta Barat', 'Jakarta Timur', 'Jakarta Utara'];
-    const streets = ['Jalan Sudirman', 'Jalan Thamrin', 'Jalan Gatot Subroto', 'Jalan Rasuna Said', 'Jalan Kemang'];
 
-    return Array.from({ length: count }, (_, i) => {
-        const status = statuses[Math.floor(Math.random() * statuses.length)];
-        const city = cities[Math.floor(Math.random() * cities.length)];
-        const street = streets[Math.floor(Math.random() * streets.length)];
-        const num = Math.floor(Math.random() * 200) + 1;
-
-        return {
-            id: `pkg-${i + 1}`,
-            package_id: `PKT${new Date().getFullYear()}${String(i + 1).padStart(6, '0')}`,
-            device_id: `scanner-${Math.floor(Math.random() * 20) + 1}`,
-            ocr_text: `${street} No. ${num}, RT 0${Math.floor(Math.random() * 9) + 1}/RW 0${Math.floor(Math.random() * 9) + 1}, ${city}`,
-            ocr_confidence: Math.random() * 0.3 + 0.65,
-            status,
-            priority: Math.random() > 0.8 ? 'high' : 'standard',
-            created_at: new Date(Date.now() - Math.random() * 86400000).toISOString(),
-        };
-    });
-}
-
-function generateMockRoutes(): Route[] {
-    return [
-        {
-            id: 'route-1',
-            vehicle_id: 'V001',
-            vehicle_code: 'V001',
-            driver_name: 'Driver A',
-            planned_date: new Date().toISOString().split('T')[0],
-            status: 'planned',
-            total_distance_km: 25.4,
-            total_time_minutes: 180,
-            total_stops: 12,
-            stops: [
-                { sequence: 0, lat: -6.2088, lon: 106.8456, address_summary: 'Depot', status: 'completed' },
-                { sequence: 1, package_id: 'PKT001', lat: -6.225, lon: 106.795, address_summary: 'Jalan Sudirman 45', status: 'pending' },
-                { sequence: 2, package_id: 'PKT002', lat: -6.235, lon: 106.780, address_summary: 'Jalan Thamrin 12', status: 'pending' },
-                { sequence: 3, package_id: 'PKT003', lat: -6.215, lon: 106.820, address_summary: 'Jalan Gatot Subroto 78', status: 'pending' },
-            ],
-        },
-        {
-            id: 'route-2',
-            vehicle_id: 'V002',
-            vehicle_code: 'V002',
-            driver_name: 'Driver B',
-            planned_date: new Date().toISOString().split('T')[0],
-            status: 'planned',
-            total_distance_km: 18.7,
-            total_time_minutes: 150,
-            total_stops: 8,
-            stops: [
-                { sequence: 0, lat: -6.2088, lon: 106.8456, address_summary: 'Depot', status: 'completed' },
-                { sequence: 1, package_id: 'PKT004', lat: -6.180, lon: 106.830, address_summary: 'Jalan Kemang 33', status: 'pending' },
-                { sequence: 2, package_id: 'PKT005', lat: -6.190, lon: 106.850, address_summary: 'Jalan Rasuna Said 99', status: 'pending' },
-            ],
-        },
-    ];
-}
