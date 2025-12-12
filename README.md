@@ -2,7 +2,7 @@
 
 A comprehensive system for package delivery routing with OCR-based address extraction, normalization, geocoding, and VRP (Vehicle Routing Problem) optimization.
 
-## 🚀 Features
+## Features
 
 - **OCR Processing**: Server-side OCR using Tesseract for package label extraction
 - **Address Parsing**: Indonesian address parser with RT/RW support and OCR error correction
@@ -11,13 +11,13 @@ A comprehensive system for package delivery routing with OCR-based address extra
 - **Real-time Processing**: Kafka-based message streaming for async processing
 - **RESTful API**: FastAPI-based endpoints for all operations
 
-## 📋Requirements
+## Requirements
 
 - Docker & Docker Compose
 - Python 3.11+ (for local development)
 - 4GB+ RAM (for all services)
 
-## 🏃 Quick Start
+## Quick Start
 
 ### 1. Clone and Configure
 
@@ -54,7 +54,7 @@ curl http://localhost:8000/health/ready
 
 Open [http://localhost:8000/docs](http://localhost:8000/docs) for Swagger UI.
 
-## 📡 API Endpoints
+## API Endpoints
 
 ### Ingest
 
@@ -113,7 +113,7 @@ GET /api/v1/routes/{route_id}
 GET /api/v1/routes?planned_date=2025-12-12
 ```
 
-## 🧪 Testing with Sample Data
+## Testing with Sample Data
 
 Generate and seed sample data:
 
@@ -125,7 +125,7 @@ python scripts/seed_data.py
 python scripts/seed_data.py --seed
 ```
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 paket/
@@ -151,7 +151,7 @@ paket/
         └── workers/         # Kafka consumers
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 Key environment variables:
 
@@ -163,7 +163,7 @@ Key environment variables:
 | `GEOCODING_PROVIDER` | Geocoder to use | `nominatim` |
 | `VRP_MAX_SOLVE_TIME_SECONDS` | Max optimization time | `300` |
 
-## 🔧 Development
+## Development
 
 ### Local Development (without Docker)
 
@@ -187,7 +187,7 @@ uvicorn main:app --reload --port 8000
 pytest tests/ -v
 ```
 
-## 📊 Architecture
+## Architecture
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
@@ -216,7 +216,7 @@ pytest tests/ -v
               └───────────┘           └─────────────┘           └───────────────┘
 ```
 
-## 📱 Client Applications
+## Client Applications
 
 ### Web Dashboard (Next.js)
 
@@ -230,11 +230,11 @@ npm run dev
 ```
 
 **Features:**
-- 📊 Real-time stats and metrics
-- 🗺️ Route visualization with Leaflet maps
-- 📦 Package management with search/filter
-- ✅ Human-in-the-loop verification
-- 🚀 VRP optimization trigger
+- Real-time stats and metrics
+- Route visualization with Leaflet maps
+- Package management with search/filter
+- Human-in-the-loop verification
+- VRP optimization trigger
 
 ### Scanner App (Flutter)
 
@@ -247,11 +247,11 @@ flutter run
 ```
 
 **Features:**
-- 📷 Camera-based label scanning
-- 🔤 On-device OCR with ML Kit
-- 📍 GPS location capture
-- 🔄 Offline-first with sync queue
-- 📜 Scan history
+- Camera-based label scanning
+- On-device OCR with ML Kit
+- GPS location capture
+- Offline-first with sync queue
+- Scan history
 
 ### Driver App (Flutter)
 
@@ -264,13 +264,13 @@ flutter run
 ```
 
 **Features:**
-- 🗺️ Interactive route map
-- 📍 Turn-by-turn navigation (Google Maps integration)
-- ✅ Delivery confirmation
-- ⏭️ Skip with reason tracking
-- 📊 Progress tracking
+- Interactive route map
+- Turn-by-turn navigation (Google Maps integration)
+- Delivery confirmation
+- Skip with reason tracking
+- Progress tracking
 
-## 🚧 Roadmap
+## Roadmap
 
 - [ ] ETA prediction ML model
 - [ ] Real-time traffic integration
@@ -279,6 +279,6 @@ flutter run
 - [ ] Push notifications for drivers
 - [ ] Customer delivery tracking
 
-## 📄 License
+## License
 
 MIT License
